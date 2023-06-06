@@ -17,8 +17,8 @@ const rl = readline.createInterface({
 
 let app;
 
-function askQuestion() {
-    rl.question(chalk.green(' → Qual aplicação deseja rodar? '), (answer) => {
+async function askQuestion() {
+    rl.question(chalk.green(' → Qual aplicação deseja rodar? '), async (answer) => {
         const filePath = path.join(__dirname, 'apps', `${answer}.json`);
         fs.access(filePath, fs.constants.F_OK, (err) => {
             if (err) {
@@ -47,94 +47,104 @@ function askQuestion() {
 }
 
 async function executeCommands(commandIndex) {
-    if (commandIndex < app.comandos.length) {
-        const comando = app.comandos[commandIndex];
-        if (comando.variaveis && comando.variaveis.length > 0) {
-            askVariables(comando.variaveis, 0, {}, (answers) => {
-                console.log(chalk.green(`\nExecutando: ${comando.descricao}...`));
-                comando.variaveis.forEach((variavel) => {
-                    console.log(chalk.white(`  Iniciando...`));
-                    if (variavel.exec) {
-                        const execFunction = requireFromString(fs.readFileSync(path.join(__dirname, 'execs', `${variavel.exec}.js`), 'utf8'));
-                        let params = [];
-                        if (comando.vars && typeof comando.vars === 'object') {
-                            params = Object.entries(comando.vars).map(([key, value]) => {
-                                if (typeof value === 'string' && value.startsWith('{') && value.endsWith('}')) {
-                                    value = value.slice(1, -1); // remove the braces
-                                    return registeredValues[value];
-                                } else {
-                                    return value;
+    try {
+        if (commandIndex < app.comandos.length) {
+            const comando = app.comandos[commandIndex];
+            if (comando.variaveis && comando.variaveis.length > 0) {
+                askVariables(comando.variaveis, 0, {}, async (answers) => {
+                    console.log(chalk.green(`\nExecutando: ${comando.descricao}...`));
+                    for (const variavel of comando.variaveis) {
+                        console.log(chalk.white(`  Iniciando...`));
+                        if (variavel.exec) {
+                            const execFunction = requireFromString(fs.readFileSync(path.join(__dirname, 'execs', `${variavel.exec}.js`), 'utf8'));
+                            let params = [];
+                            if (comando.vars && typeof comando.vars === 'object') {
+                                params = Object.entries(comando.vars).map(([key, value]) => {
+                                    if (typeof value === 'string' && value.startsWith('{') && value.endsWith('}')) {
+                                        value = value.slice(1, -1); // remove the braces
+                                        return registeredValues[value];
+                                    } else {
+                                        return value;
+                                    }
+                                });
+                            }
+                            const execResult = await execFunction(...params);
+                            if (execResult === 'erro') {
+                                console.error(chalk.red(`Erro na execução do comando: ${comando.descricao}`));
+                                throw new Error(`Erro na execução do comando: ${comando.descricao}`);
+                            } else {
+                                console.log(chalk.green(`  Ok!`));
+                                if (comando.id) {
+                                    registeredValues[comando.id] = execResult;
                                 }
-                            });
-                        }
-                        const execResult = await execFunction(...params);
-                        if (execResult === 'erro') {
-                            console.error(chalk.red(`Erro na execução do comando: ${comando.descricao}`));
-                            throw new Error(`Erro na execução do comando: ${comando.descricao}`);
-                        } else {
-                            console.log(chalk.green(`  Ok!`));
-                            if (comando.id) {
-                                registeredValues[comando.id] = execResult;
                             }
                         }
                     }
+                    executeCommands(commandIndex + 1);
                 });
-                executeCommands(commandIndex + 1);
-            });
-        } else {
-            console.log(chalk.green(`\nExecutando: ${comando.descricao}...`));
-            if (comando.exec) {
-                console.log(chalk.white(`  Iniciando...`));
-                const execFunction = requireFromString(fs.readFileSync(path.join(__dirname, 'execs', `${comando.exec}.js`), 'utf8'));
-                let params = [];
-                if (comando.vars && typeof comando.vars === 'object') {
-                    params = Object.entries(comando.vars).map(([key, value]) => {
-                        if (typeof value === 'string' && value.startsWith('{') && value.endsWith('}')) {
-                            value = value.slice(1, -1); // remove the braces
-                            return registeredValues[value];
-                        } else {
-                            return value;
+            } else {
+                console.log(chalk.green(`\nExecutando: ${comando.descricao}...`));
+                if (comando.exec) {
+                    console.log(chalk.white(`  Iniciando...`));
+                    const execFunction = requireFromString(fs.readFileSync(path.join(__dirname, 'execs', `${comando.exec}.js`), 'utf8'));
+                    let params = [];
+                    if (comando.vars && typeof comando.vars === 'object') {
+                        params = Object.entries(comando.vars).map(([key, value]) => {
+                            if (typeof value === 'string' && value.startsWith('{') && value.endsWith('}')) {
+                                value = value.slice(1, -1); // remove the braces
+                                return registeredValues[value];
+                            } else {
+                                return value;
+                            }
+                        });
+                    }
+                    const execResult = await execFunction(...params);
+                    if (execResult === 'erro') {
+                        console.error(chalk.red(`Erro na execução do comando: ${comando.descricao}`));
+                        throw new Error(`Erro na execução do comando: ${comando.descricao}`);
+                    } else {
+                        console.log(chalk.green(`  Ok!`));
+                        if (comando.id) {
+                            registeredValues[comando.id] = execResult;
                         }
-                    });
-                }
-                const execResult = execFunction(...params);
-                if (execResult === 'erro') {
-                    console.error(chalk.red(`Erro na execução do comando: ${comando.descricao}`));
-                    throw new Error(`Erro na execução do comando: ${comando.descricao}`);
-                } else {
-                    console.log(chalk.green(`  Ok!`));
-                    if (comando.id) {
-                        registeredValues[comando.id] = execResult;
                     }
                 }
+                executeCommands(commandIndex + 1);
             }
-            executeCommands(commandIndex + 1);
+        } else {
+            console.log(chalk.green('\nObrigado! Agora vamos executar as respostas e rodar os prompts...'));
+            rl.close();
         }
-    } else {
-        console.log(chalk.green('\nObrigado! Agora vamos executar as respostas e rodar os prompts...'));
+    } catch (error) {
+        console.error(chalk.red('Ocorreu um erro durante a execução dos comandos:', error));
         rl.close();
     }
 }
 
 async function askVariables(variaveis, variableIndex, answers, callback) {
-    if (variableIndex < variaveis.length) {
-        const variavel = variaveis[variableIndex];
-        rl.question(chalk.cyan(`\n${variavel.pergunta}\n`), (answer) => {
-            const validationFunction = requireFromString(fs.readFileSync(path.join(__dirname, 'execs', `${variavel.exec}.js`), 'utf8'));
-            const validationResult = await validationFunction(answer);
-            if (validationResult === 'erro') {
-                console.log(chalk.red(`Erro na validação do comando: ${variavel.nome}`));
-                rl.close();
-            } else {
-                answers[variavel.nome] = validationResult;
-                if (variavel.id) {
-                    registeredValues[variavel.id] = validationResult;
+    try {
+        if (variableIndex < variaveis.length) {
+            const variavel = variaveis[variableIndex];
+            rl.question(chalk.cyan(`\n${variavel.pergunta}\n`), async (answer) => {
+                const validationFunction = requireFromString(fs.readFileSync(path.join(__dirname, 'execs', `${variavel.exec}.js`), 'utf8'));
+                const validationResult = await validationFunction(answer);
+                if (validationResult === 'erro') {
+                    console.log(chalk.red(`Erro na validação do comando: ${variavel.nome}`));
+                    rl.close();
+                } else {
+                    answers[variavel.nome] = validationResult;
+                    if (variavel.id) {
+                        registeredValues[variavel.id] = validationResult;
+                    }
+                    askVariables(variaveis, variableIndex + 1, answers, callback);
                 }
-                askVariables(variaveis, variableIndex + 1, answers, callback);
-            }
-        });
-    } else {
-        callback(answers);
+            });
+        } else {
+            callback(answers);
+        }
+    } catch (error) {
+        console.error(chalk.red('Ocorreu um erro durante a solicitação das variáveis:', error));
+        rl.close();
     }
 }
 

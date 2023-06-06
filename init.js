@@ -43,6 +43,7 @@ async function askQuestion() {
                 app = JSON.parse(fs.readFileSync(filePath, 'utf8'));
                 console.log(chalk.white('Nome da Aplicação: ') + chalk.cyan(`${app.nome}`));
                 console.log(chalk.white('Descrição: ') + chalk.cyan(`${app.descricao}`));
+                registerLog(`Novo acesso à aplicação: ${app.nome}`);
                 console.log('\nComandos:');
                 app.comandos.forEach((comando, index) => {
                     console.log(chalk.cyan(`  ${index + 1}. ${comando.descricao}`));
@@ -59,6 +60,7 @@ async function askQuestion() {
         });
     });
 }
+
 
 async function executeCommands(commandIndex) {
     try {

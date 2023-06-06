@@ -1,0 +1,41 @@
+{
+    "nome":"Mais Café - Redator",
+    "descricao": "Este app utilizará IA para gerar novos artigos para o blog www.maiscafe.blog.br conforme orientação prevista nos comandos.",
+    "comandos": [
+        {
+            "id": "url",
+            "descricao" : "Pergunta pro usuário qual a URL de base pra ele carregar o conteúdo",
+            "variaveis": [
+                {
+                    "id" : "urlbase",
+                    "pergunta": "Qual a URL que você gostara de usar o conteúdo como base?",
+                    "exec": "url"
+                }
+            ],
+            "prompt": ""
+        },
+        {
+            "descricao" : "Pergunta se o usuário tem alguma instrução além do conteúdo já carregado",
+            "variaveis": [
+                {
+                    "id" : "instrucoes",
+                    "pergunta": "Você tem alguma instrução específica pra acrecentar ao conteúdo da URL?",
+                    "exec": "string"
+                }
+            ],
+            "prompt": ""
+        },
+        {
+            "descricao" : "Gerará uma nova versão, totalmente original do conteúdo de base.",
+            "exec": "string",
+            "vars": {
+                "input" : "xxxx",
+                "modelo": "gpt4"
+            }
+            
+        },
+        {
+            "descricao" : "Publicará no site www.maiscafe.blog.br"
+        }
+    ]
+}

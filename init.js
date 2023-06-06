@@ -6,6 +6,20 @@ const requireFromString = require('require-from-string');
 
 const makeRequest = require('./functions.js');
 
+
+function registerLog(log) {
+    const logFilePath = path.join(__dirname, 'log.txt');
+    const logMessage = `[${new Date().toISOString()}] ${log}\n`;
+  
+    fs.appendFile(logFilePath, logMessage, (err) => {
+      if (err) {
+        console.error(`Erro ao registrar log: ${err}`);
+      }
+    });
+  }
+
+
+
 let registeredValues = {};
 
 console.log("Bem-vindo ao Command GPT desenvolvido por Tihh Gonçalves\n");
@@ -55,6 +69,7 @@ async function executeCommands(commandIndex) {
                     console.log(chalk.green(`\nExecutando: ${comando.descricao}...`));
                     for (const variavel of comando.variaveis) {
                         console.log(chalk.white(`  Iniciando...`));
+                        registerLog(`Executando: ${comando.descricao}`);
                         if (variavel.exec) {
                             const execFunction = requireFromString(fs.readFileSync(path.join(__dirname, 'execs', `${variavel.exec}.js`), 'utf8'));
                             let params = [];
@@ -71,6 +86,7 @@ async function executeCommands(commandIndex) {
                             const execResult = await execFunction(...params);
                             if (execResult === 'erro') {
                                 console.error(chalk.red(`Erro na execução do comando: ${comando.descricao}`));
+                                registerLog(`Erro na execução do comando: ${comando.descricao}`);
                                 throw new Error(`Erro na execução do comando: ${comando.descricao}`);
                             } else {
                                 console.log(chalk.green(`  Ok!`));
@@ -104,6 +120,7 @@ async function executeCommands(commandIndex) {
                         throw new Error(`Erro na execução do comando: ${comando.descricao}`);
                     } else {
                         console.log(chalk.green(`  Ok!`));
+                        registerLog(`Execução do comando: ${comando.descricao} concluída com sucesso`);
                         if (comando.id) {
                             registeredValues[comando.id] = execResult;
                         }
@@ -125,17 +142,20 @@ async function askVariables(variaveis, variableIndex, answers, callback) {
     try {
         if (variableIndex < variaveis.length) {
             const variavel = variaveis[variableIndex];
-            rl.question(chalk.cyan(`\n${variavel.pergunta}\n`), async (answer) => {
+            console.log(chalk.cyan(`\n${variavel.pergunta}\n`));
+            registerLog(`Pergunta da variável: ${variavel.pergunta}`);
+            rl.question(chalk.cyan('> '), async (answer) => {
                 const validationFunction = requireFromString(fs.readFileSync(path.join(__dirname, 'execs', `${variavel.exec}.js`), 'utf8'));
                 const validationResult = await validationFunction(answer);
                 if (validationResult === 'erro') {
-                    console.log(chalk.red(`Erro na validação do comando: ${variavel.nome}`));
+                    console.log(chalk.red(`Erro na validação do comando: ${variavel.id}`));
                     rl.close();
                 } else {
-                    answers[variavel.nome] = validationResult;
+                    answers[variavel.id] = validationResult;
                     if (variavel.id) {
                         registeredValues[variavel.id] = validationResult;
                     }
+                    registerLog(`Variável ${variavel.id} executada com sucesso`);
                     askVariables(variaveis, variableIndex + 1, answers, callback);
                 }
             });
@@ -147,5 +167,6 @@ async function askVariables(variaveis, variableIndex, answers, callback) {
         rl.close();
     }
 }
+
 
 askQuestion();

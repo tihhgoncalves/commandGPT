@@ -7,9 +7,9 @@ const requireFromString = require('require-from-string');
 const makeRequest = require('./functions.js');
 
 
-function registerLog(log) {
+function registerLog(...logParams) {
     const logFilePath = path.join(__dirname, 'log.txt');
-    const logMessage = `[${new Date().toISOString()}] ${log}\n`;
+    const logMessage = `[${new Date().toISOString()}] ${logParams.join(' ')}\n`;
   
     fs.appendFile(logFilePath, logMessage, (err) => {
       if (err) {
@@ -86,6 +86,8 @@ async function executeCommands(commandIndex) {
                                 });
                             }
                             const execResult = await execFunction(...params);
+                            registerLog(`Variável ${variavel.id} executada com sucesso. Retorno:`, execResult);
+
                             if (execResult === 'erro') {
                                 console.error(chalk.red(`Erro na execução do comando: ${comando.descricao}`));
                                 registerLog(`Erro na execução do comando: ${comando.descricao}`);
@@ -116,7 +118,9 @@ async function executeCommands(commandIndex) {
                             }
                         });
                     }
-                    const execResult = await execFunction(...params);
+                        const execResult = await execFunction(...params);
+                        registerLog(`Execução do comando: ${comando.descricao} concluída com sucesso. Retorno:`, execResult);
+                        
                     if (execResult === 'erro') {
                         console.error(chalk.red(`Erro na execução do comando: ${comando.descricao}`));
                         throw new Error(`Erro na execução do comando: ${comando.descricao}`);
